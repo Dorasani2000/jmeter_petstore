@@ -1,0 +1,72 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'dorasanamma/jmetertesting:v1.0'
+        TEST_REPO = 'https://github.com/Dorasani2000/petstore_Jmeter_test.git'
+    }
+
+    stages {
+
+        stage('Checkout Tests') {
+            steps {
+                git branch: 'main',
+                    credentialsId: 'git_pat',
+                    url: TEST_REPO
+            }
+        }
+
+        stage('Run JMeter Tests') {
+            steps {
+                bat """
+                if exist results_pet.jtl del results_pet.jtl
+                if exist jmeter.log del jmeter.log
+                if exist report rmdir /s /q report
+                docker run --rm -v %cd%\\:/tests -w /tests ${IMAGE_NAME} ^
+                -n -t petstore.octoperf.com_new.jmx -l results_pet.jtl -j jmeter.log -e -o report
+                """
+            }
+        }
+
+        stage('Archive Results') {
+            steps {
+                archiveArtifacts artifacts: 'results_pet.jtl, report/**', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'jmeter.log, report/**', allowEmptyArchive: true
+            }
+        }
+
+        stage('Push Results to GitHub') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'git_pat',
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_PASS'
+                    )
+                ]) {
+                    bat """
+                    git config --global user.email "dorasanammagumparlapati@gmail.com"
+                    git config --global user.name "Dorasani2000"
+
+                    rem Pull latest changes first
+                    git pull https://%GIT_USER%:%GIT_PASS%@github.com/Dorasani2000/petstore_Jmeter_test.git main
+
+                    rem Create results folder if not exists
+                    if not exist results mkdir results
+
+                    rem Append build number to results file and folder
+                    set BUILD_NUM=%BUILD_NUMBER%
+                    copy /Y results_pet.jtl, results\\results_%BUILD_NUM%.jtl
+                    xcopy /E /I /Y report results\\report_%BUILD_NUM%
+
+                    git add results\\
+
+                    git commit -m "Automated: Add latest JMeter results for build #%BUILD_NUM%" || echo Nothing to commit
+
+                    git push https://%GIT_USER%:%GIT_PASS%@github.com/Dorasani2000/petstore_Jmeter_test.git main
+                    """
+                }
+            }
+        }
+    }
+}
