@@ -19,7 +19,7 @@ pipeline {
         stage('Run JMeter Tests') {
             steps {
                 bat """
-                if exist results_pet.jtl del results_pet.jtl
+                if exist results_store.jtl del results_store.jtl
                 if exist jmeter.log del jmeter.log
                 if exist report rmdir /s /q report
                 docker run --rm -v %cd%\\:/tests -w /tests ${IMAGE_NAME} ^
@@ -56,7 +56,7 @@ pipeline {
 
                     rem Append build number to results file and folder
                     set BUILD_NUM=%BUILD_NUMBER%
-                    copy /Y results_pet.jtl, results\\results_%BUILD_NUM%.jtl
+                    copy /Y results_store.jtl, results\\results_%BUILD_NUM%.jtl
                     xcopy /E /I /Y report results\\report_%BUILD_NUM%
 
                     git add results\\
