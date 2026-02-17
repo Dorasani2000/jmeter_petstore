@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'dorasanamma/jmetertesting:v1.0'
-        TEST_REPO = 'https://github.com/Dorasani2000/petstore_Jmeter_test.git'
+        TEST_REPO = 'https://github.com/Dorasani2000/jmeter_petstore.git'
     }
 
     stages {
@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout Tests') {
             steps {
                 git branch: 'main',
-                    credentialsId: 'git_pat',
+                    credentialsId: 'git_store',
                     url: TEST_REPO
             }
         }
@@ -23,14 +23,14 @@ pipeline {
                 if exist jmeter.log del jmeter.log
                 if exist report rmdir /s /q report
                 docker run --rm -v %cd%\\:/tests -w /tests ${IMAGE_NAME} ^
-                -n -t petstore.octoperf.com_new.jmx -l results_pet.jtl -j jmeter.log -e -o report
+                -n -t petstore.octoperf.com_new.jmx -l results_store.jtl -j jmeter.log -e -o report
                 """
             }
         }
 
         stage('Archive Results') {
             steps {
-                archiveArtifacts artifacts: 'results_pet.jtl, report/**', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'results_store.jtl, report/**', allowEmptyArchive: true
                 archiveArtifacts artifacts: 'jmeter.log, report/**', allowEmptyArchive: true
             }
         }
@@ -39,7 +39,7 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'git_pat',
+                        credentialsId: 'git_store',
                         usernameVariable: 'GIT_USER',
                         passwordVariable: 'GIT_PASS'
                     )
@@ -49,7 +49,7 @@ pipeline {
                     git config --global user.name "Dorasani2000"
 
                     rem Pull latest changes first
-                    git pull https://%GIT_USER%:%GIT_PASS%@github.com/Dorasani2000/petstore_Jmeter_test.git main
+                    git pull https://%GIT_USER%:%GIT_PASS%@github.com/Dorasani2000/jmeter_petstore.git main
 
                     rem Create results folder if not exists
                     if not exist results mkdir results
@@ -63,7 +63,7 @@ pipeline {
 
                     git commit -m "Automated: Add latest JMeter results for build #%BUILD_NUM%" || echo Nothing to commit
 
-                    git push https://%GIT_USER%:%GIT_PASS%@github.com/Dorasani2000/petstore_Jmeter_test.git main
+                    git push https://%GIT_USER%:%GIT_PASS%@github.com/Dorasani2000/jmeter_petstore.git main
                     """
                 }
             }
